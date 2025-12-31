@@ -41,7 +41,9 @@ footer{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  padding:6px 10px 2px;   /* ⬅️ mniejszy dół */
+
+  padding:6px 10px;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom));
 }
 #timer{width:64px;height:64px;border-radius:50%;
 background:conic-gradient(#2563eb var(--p),rgba(0,0,0,.15) 0);
