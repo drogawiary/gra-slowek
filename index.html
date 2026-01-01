@@ -21,13 +21,22 @@ h1{margin:0 0 20px;font-size:28px}
 
 #app{display:none;flex-direction:column;height:100%}
 header{
-  padding-top: calc(16px + env(safe-area-inset-top));
-  padding-bottom: 6px;
+  padding: 14px 12px 10px;
+  margin-top: env(safe-area-inset-top);
+  margin-bottom: 8px;
   text-align:center;
 }
+#words{
+  display:flex;
+  gap:6px;
+  justify-content:center;
+  flex-wrap:wrap;
 
-
-#words{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  padding:10px 12px;
+  background:#fffaf0;
+  border-radius:14px;
+  box-shadow:0 4px 10px rgba(0,0,0,.08);
+}
 .word{padding:6px 12px;border-radius:999px;border:2px solid #e7d6a8;background:#fffaf0;font-weight:900;font-size:16px}
 .word.off{opacity:.35;text-decoration:line-through}
 .word.on{background:#eef6ff;border-color:#b9d6ff}
