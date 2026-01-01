@@ -21,10 +21,12 @@ h1{margin:0 0 20px;font-size:28px}
 
 #app{display:none;flex-direction:column;height:100%}
 header{
-  padding:8px;
+  padding-top: calc(16px + env(safe-area-inset-top));
+  padding-bottom: 6px;
   text-align:center;
-  margin-bottom:6px;   /* ⬅️ to zepchnie planszę w dół */
 }
+
+
 #words{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
 .word{padding:6px 12px;border-radius:999px;border:2px solid #e7d6a8;background:#fffaf0;font-weight:900;font-size:16px}
 .word.off{opacity:.35;text-decoration:line-through}
