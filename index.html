@@ -44,7 +44,7 @@ header{padding:14px 12px 10px;margin-top:env(safe-area-inset-top);margin-bottom:
 
 #board{flex:1;display:grid;gap:8px;padding:30px 12px;touch-action:none;box-sizing:border-box}
 .cell{background:#fffaf0;border-radius:12px;display:flex;align-items:center;justify-content:center;
-font-size:24px;font-weight:900;user-select:none}
+font-size:24px;font-weight:900;user-select:none;transition:transform 0.9s ease-in-out, background 0.4s}
 .cell.sel{background:#c7e0ff}
 .cell.hit{background:rgba(34,197,94,.45)}
 
@@ -76,11 +76,46 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
 .audioBtn.off{opacity:0.35}
 
 .resultsCongrats{text-align:center;font-weight:800;margin-top:30px;margin-bottom:18px}
+
+/* ANIMACJE */
+@keyframes spin180 {
+  0%   { transform: rotateY(0deg); }
+  50%  { transform: rotateY(180deg); }
+  100% { transform: rotateY(360deg); }
+}
+.cell.flip {
+  animation: spin180 0.9s ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); border-color: #e7d6a8; }
+  50%      { transform: scale(1.15); border-color: #ef4444; box-shadow: 0 0 15px rgba(239,68,68,.5); }
+}
+.word.pulse {
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-4px, 0, 0); }
+  20%, 80% { transform: translate3d(8px, 0, 0); }
+  30%, 70% { transform: translate3d(-10px, 0, 0); }
+  40%, 60% { transform: translate3d(10px, 0, 0); }
+  50%      { transform: translate3d(-4px, 0, 0); }
+}
+#board.shake {
+  animation: shake 0.6s ease-in-out;
+}
+
+.cell.reveal {
+  background: #22c55e !important;
+  color: white;
+  font-weight: 900;
+  box-shadow: 0 0 15px rgba(34,197,94,.8);
+}
 </style>
 </head>
 <body>
 <div id="shell">
-
   <!-- MENU GŁÓWNE -->
   <div id="menu">
     <div class="card">
@@ -93,7 +128,6 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
         <button class="btnFlat" data-mode="xl">XL – 8 × 10 (6-literowe)</button>
 
         <button class="btnFlat small" id="showResults">📊 Wyniki gry</button>
-
         <button class="btnFlat small danger" id="exitBtn">🚪 Wyjście</button>
         <button id="copyLinkBtn" class="btnFlat small">📋 Skopiuj adres gry</button>
         <div class="copyTip">
@@ -146,16 +180,14 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
     </p>
     <button class="btnBig" style="margin-top:30px;" id="backFromLogout">🔄 POWRÓT DO MENU</button>
   </div>
-
 </div>
 
 <script>
 (() => {
-  // =================================== KONFIGURACJA TRYBÓW ===================================
   const MODES = {
-    classic: { cols: 5, rows: 6, minLen: 3, maxLen: 4, words: 4, time: 60 },
-    big:     { cols: 6, rows: 7, minLen: 3, maxLen: 4, words: 4, time: 60 },
-    xl:      { cols: 8, rows: 10, minLen: 6, maxLen: 6, words: 4, time: 60 }
+    classic: { cols:5, rows:6, minLen:3, maxLen:4, words:4, time:60 },
+    big:     { cols:6, rows:7, minLen:3, maxLen:4, words:4, time:60 },
+    xl:      { cols:8, rows:10, minLen:6, maxLen:6, words:4, time:60 }
   };
 
   let WORD_MIN = 3;
@@ -163,16 +195,14 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   let WORD_COUNT = 4;
   const BASE_TIME = 60;
 
-  // =================================== LISTA SŁÓW ===================================
-  const WORDS = [
-    // 3-4 literowe
+  const ALL_WORDS = [
     "DOM","LAS","SEN","DÓŁ","BÓL","TOR","MUR","ŻAR","KĄT","ŁAN","EGO","LOS","CEL","MOC","RÓJ","TŁO","FON","KOD","RYM","MIT","SOK","LOT","RAP","ART","TYP","EKO","SYN","ŁAD","TON","WAT","GAS",
     "WODA","KAWA","RYBA","LATO","ZIMA","OKNO","RĘKA","ŻABA","ŁÓDŹ","NOCĄ","MAKI","LASY","KOTY","DOMY","DUCH","MOCY","ŚLAD","KIER","ZNAM","IDEA","FALA","MOST","TŁUM","FORMA","ŚWIT","CIEŃ","NUTA",
     "KWIAT","LIŚĆ","WIEŚ","GÓRA",
+    "KOMETA","LASERY","ZAMEK","RYCERZ","KSIĘGA","OGIEŃ","WIATR","ZIEMIA","SŁOŃCE","KSIĘŻYC","GWIAZDA","PLANETA","DRZEWO","KWIATEK","LIŚCIE","OWOCE","JABŁKO","GRUSZKA","WIŚNIA","MALINA","BORÓWKA","TRUSKAWKA","POZIOMKA","CYTRYNA","BANANY","ANANAS"
+  ];
 
-    // 6-literowe (przykładowe – dodaj więcej!)
-    "KOMETA","LASERY","ZAMEK","RYCERZ","KSIĘGA","WODA","OGIEŃ","WIATR","ZIEMIA","SŁOŃCE","KSIĘŻYC","GWIAZDA","PLANETA","DRZEWO","KWIATEK","LIŚCIE","OWOCE","JABŁKO","GRUSZKA","WIŚNIA","TRUSKAWKA","MALINA","BORÓWKA"
-  ].filter(w => w.length >= WORD_MIN && w.length <= WORD_MAX); // filtr dynamiczny
+  let WORDS = ALL_WORDS.filter(w => w.length >= 3 && w.length <= 4);
 
   const ALPH = "AĄBCĆDEĘFGHIJKLŁMNŃOÓPQRSŚTUVWXYZŹŻ";
   const DIRS = [{dr:0,dc:1},{dr:1,dc:0},{dr:1,dc:1},{dr:1,dc:-1},{dr:0,dc:-1},{dr:-1,dc:0},{dr:-1,dc:-1},{dr:-1,dc:1}];
@@ -193,11 +223,9 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   const globalStatsEl = document.getElementById("globalStats");
   const lastSessionStatsEl = document.getElementById("lastSessionStats");
   const todayStatsEl = document.getElementById("todayStats");
-
   const exitBtn = document.getElementById("exitBtn");
   const logoutScreen = document.getElementById("logoutScreen");
   const backFromLogout = document.getElementById("backFromLogout");
-
   const toggleTickBtn = document.getElementById("toggleTick");
   const toggleSoundBtn = document.getElementById("toggleSound");
 
@@ -212,111 +240,68 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   let dragging = false;
   let startCell = null;
   let path = [];
+  let wordPositions = []; // przechowujemy pozycje słów do reveal po przegranej
 
   let activeCount = Math.max(1, Math.min(4, Number(localStorage.getItem("ACTIVE_COUNT")) || 2));
 
-  // ===== DŹWIĘKI =====
+  // Dźwięki (bez zmian)
   const clickSound = new Audio('sounds/click.mp3');
   const tickSound = new Audio('sounds/tick.mp3');
   const recordsMusic = new Audio('sounds/records_loop.mp3');
   const fanfareSound = new Audio('sounds/fanfare.mp3');
   const loseSound = new Audio('sounds/lose.mp3');
 
-  clickSound.volume = 0.6;
-  tickSound.volume = 0.6;
-  recordsMusic.volume = 0.9;
-  recordsMusic.loop = true;
-  fanfareSound.volume = 0.4;
-  loseSound.volume = 0.8;
+  clickSound.volume = 0.6; tickSound.volume = 0.6; recordsMusic.volume = 0.9; recordsMusic.loop = true;
+  fanfareSound.volume = 0.4; loseSound.volume = 0.8;
 
   let soundOn = (localStorage.getItem("SOUND_ON") ?? "1") !== "0";
   let tickOn  = (localStorage.getItem("TICK_ON")  ?? "1") !== "0";
 
   function syncAudioFlags() {
     const muteAll = !soundOn;
-    [clickSound, tickSound, recordsMusic, fanfareSound, loseSound].forEach(a => { a.muted = muteAll; });
+    [clickSound, tickSound, recordsMusic, fanfareSound, loseSound].forEach(a => a.muted = muteAll);
     tickSound.muted = muteAll || !tickOn;
-    if (muteAll) { try { recordsMusic.pause(); recordsMusic.currentTime = 0; } catch (e) {} }
+    if (muteAll) try { recordsMusic.pause(); recordsMusic.currentTime = 0; } catch(e){}
   }
-
   function renderAudioButtons() {
     toggleTickBtn.textContent = tickOn ? "🕒" : "🚫";
     toggleTickBtn.classList.toggle("off", !tickOn || !soundOn);
     toggleSoundBtn.textContent = soundOn ? "🎵" : "🚫";
     toggleSoundBtn.classList.toggle("off", !soundOn);
   }
-
-  function safePlay(audio, { reset=true } = {}) {
-    try {
-      if (!audio || audio.muted) return;
-      if (reset) audio.currentTime = 0;
-      audio.play().catch(() => {});
-    } catch (e) {}
+  function safePlay(audio, {reset=true}={}) {
+    try { if (!audio || audio.muted) return; if (reset) audio.currentTime = 0; audio.play().catch(()=>{}); } catch(e){}
   }
 
-  syncAudioFlags();
-  renderAudioButtons();
+  syncAudioFlags(); renderAudioButtons();
 
-  toggleSoundBtn.onclick = () => {
-    soundOn = !soundOn;
-    localStorage.setItem("SOUND_ON", soundOn ? "1" : "0");
-    syncAudioFlags();
-    renderAudioButtons();
+  toggleSoundBtn.onclick = () => { soundOn = !soundOn; localStorage.setItem("SOUND_ON", soundOn?"1":"0"); syncAudioFlags(); renderAudioButtons(); };
+  toggleTickBtn.onclick = () => { tickOn = !tickOn; localStorage.setItem("TICK_ON", tickOn?"1":"0"); syncAudioFlags(); renderAudioButtons(); };
+
+  document.getElementById("copyLinkBtn").onclick = async () => {
+    try { await navigator.clipboard.writeText(location.href);
+      document.getElementById("copyLinkBtn").textContent = "✅ Skopiowano adres";
+      setTimeout(() => document.getElementById("copyLinkBtn").textContent = "📋 Skopiuj adres gry", 1500);
+    } catch(e) { alert("Nie udało się"); }
   };
-
-  toggleTickBtn.onclick = () => {
-    tickOn = !tickOn;
-    localStorage.setItem("TICK_ON", tickOn ? "1" : "0");
-    syncAudioFlags();
-    renderAudioButtons();
-  };
-
-  const copyLinkBtn = document.getElementById("copyLinkBtn");
-  if (copyLinkBtn) {
-    copyLinkBtn.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-        copyLinkBtn.textContent = "✅ Skopiowano adres";
-        setTimeout(() => { copyLinkBtn.textContent = "📋 Skopiuj adres gry"; }, 1500);
-      } catch (e) {
-        alert("Nie udało się skopiować adresu");
-      }
-    };
-  }
 
   document.addEventListener('click', () => {
-    [tickSound, recordsMusic, fanfareSound, loseSound].forEach(a => {
-      a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
-    });
-  }, { once: true });
+    [tickSound, recordsMusic, fanfareSound, loseSound].forEach(a => a.play().then(()=>{a.pause();a.currentTime=0;}).catch(()=>{}));
+  }, {once:true});
 
-  document.addEventListener('click', (e) => {
-    if (!soundOn) return;
-    if (e.target.closest('.btn, .btnBig, .iconBtn, .btnFlat, .btnInstall')) {
-      safePlay(clickSound);
-    }
+  document.addEventListener('click', e => {
+    if (soundOn && e.target.closest('.btn, .btnBig, .iconBtn, .btnFlat')) safePlay(clickSound);
   });
 
-  // =================================== WYBÓR TRYBU ===================================
+  // Wybór trybu (bez zmian)
   document.querySelectorAll("[data-mode]").forEach(btn => {
     btn.onclick = () => {
       const m = MODES[btn.dataset.mode];
-
       GAME = { rows: m.rows, cols: m.cols };
       WORD_MIN = m.minLen;
       WORD_MAX = m.maxLen;
       WORD_COUNT = m.words;
-
-      // Odśwież listę słów zgodnie z nowymi ograniczeniami długości
-      WORDS.length = 0; // czyścimy
-      const allWords = [
-        "DOM","LAS","SEN","DÓŁ","BÓL","TOR","MUR","ŻAR","KĄT","ŁAN","EGO","LOS","CEL","MOC","RÓJ","TŁO","FON","KOD","RYM","MIT","SOK","LOT","RAP","ART","TYP","EKO","SYN","ŁAD","TON","WAT","GAS",
-        "WODA","KAWA","RYBA","LATO","ZIMA","OKNO","RĘKA","ŻABA","ŁÓDŹ","NOCĄ","MAKI","LASY","KOTY","DOMY","DUCH","MOCY","ŚLAD","KIER","ZNAM","IDEA","FALA","MOST","TŁUM","FORMA","ŚWIT","CIEŃ","NUTA",
-        "KWIAT","LIŚĆ","WIEŚ","GÓRA",
-        "KOMETA","LASERY","ZAMEK","RYCERZ","KSIĘGA","WODA","OGIEŃ","WIATR","ZIEMIA","SŁOŃCE","KSIĘŻYC","GWIAZDA","PLANETA","DRZEWO","KWIATEK","LIŚCIE","OWOCE","JABŁKO","GRUSZKA","WIŚNIA","TRUSKAWKA","MALINA","BORÓWKA"
-      ];
-      allWords.filter(w => w.length >= m.minLen && w.length <= m.maxLen).forEach(w => WORDS.push(w));
-
+      WORDS = ALL_WORDS.filter(w => w.length >= WORD_MIN && w.length <= WORD_MAX);
       updateBoardCSS();
       startGame();
     };
@@ -330,17 +315,12 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   function pickWords() {
     const pool = WORDS.slice();
     const out = [];
-    while (out.length < WORD_COUNT && pool.length) {
-      out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
-    }
-    while (out.length < WORD_COUNT) out.push("DOM"); // fallback
+    while (out.length < WORD_COUNT && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    while (out.length < WORD_COUNT) out.push("DOM");
     return out;
   }
 
-  // reszta kodu bez zmian...
-  function applyActiveFromCount() {
-    active = new Set(words4.slice(0, activeCount));
-  }
+  function applyActiveFromCount() { active = new Set(words4.slice(0, activeCount)); }
 
   function renderChips() {
     wordsEl.innerHTML = "";
@@ -349,13 +329,12 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
       s.className = "word off";
       s.textContent = w;
       s.onclick = () => {
-        if (active.has(w)) {
-          if (active.size <= 1) return;
-          active.delete(w);
-        } else active.add(w);
+        if (active.has(w)) { if (active.size <= 1) return; active.delete(w); }
+        else active.add(w);
         activeCount = active.size;
         localStorage.setItem("ACTIVE_COUNT", activeCount);
         found.clear();
+        wordPositions = [];
         buildRound();
       };
       wordsEl.appendChild(s);
@@ -372,12 +351,11 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
 
   function buildGrid() {
     const g = Array.from({length: GAME.rows}, () => Array(GAME.cols).fill(null));
+    wordPositions = [];
     const list = [...active];
-    for (let i = list.length-1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [list[i], list[j]] = [list[j], list[i]];
-    }
+    for (let i = list.length-1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
     for (const w of list) {
+      let placed = false;
       for (let t = 0; t < 500; t++) {
         const d = DIRS[Math.floor(Math.random() * DIRS.length)];
         const r0 = Math.floor(Math.random() * GAME.rows);
@@ -386,37 +364,29 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
         const cE = c0 + d.dc * (w.length - 1);
         if (rE < 0 || rE >= GAME.rows || cE < 0 || cE >= GAME.cols) continue;
         let ok = true;
-        for (let i = 0; i < w.length; i++) {
-          if (g[r0 + d.dr * i][c0 + d.dc * i] !== null) { ok = false; break; }
-        }
+        for (let i = 0; i < w.length; i++) if (g[r0 + d.dr * i][c0 + d.dc * i] !== null) { ok = false; break; }
         if (ok) {
-          for (let i = 0; i < w.length; i++) {
-            g[r0 + d.dr * i][c0 + d.dc * i] = w[i];
-          }
+          for (let i = 0; i < w.length; i++) g[r0 + d.dr * i][c0 + d.dc * i] = w[i];
+          wordPositions.push({word: w, path: Array.from({length: w.length}, (_,k) => ({r: r0 + d.dr * k, c: c0 + d.dc * k})) });
+          placed = true;
           break;
         }
       }
     }
-    for (let r = 0; r < GAME.rows; r++) {
-      for (let c = 0; c < GAME.cols; c++) {
-        if (g[r][c] === null) g[r][c] = ALPH[Math.floor(Math.random() * ALPH.length)];
-      }
-    }
+    for (let r = 0; r < GAME.rows; r++) for (let c = 0; c < GAME.cols; c++) if (g[r][c] === null) g[r][c] = ALPH[Math.floor(Math.random() * ALPH.length)];
     return g;
   }
 
   function renderBoard() {
     board.innerHTML = "";
     cells = [];
-    for (let r = 0; r < GAME.rows; r++) {
-      for (let c = 0; c < GAME.cols; c++) {
-        const el = document.createElement("div");
-        el.className = "cell";
-        el.textContent = grid[r][c];
-        el.dataset.r = r; el.dataset.c = c;
-        board.appendChild(el);
-        cells.push(el);
-      }
+    for (let r = 0; r < GAME.rows; r++) for (let c = 0; c < GAME.cols; c++) {
+      const el = document.createElement("div");
+      el.className = "cell";
+      el.textContent = grid[r][c];
+      el.dataset.r = r; el.dataset.c = c;
+      board.appendChild(el);
+      cells.push(el);
     }
   }
 
@@ -426,17 +396,14 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
 
   function line(a, b) {
     const dr = b.r - a.r, dc = b.c - a.c;
-    const sdr = dr === 0 ? 0 : (dr > 0 ? 1 : -1);
-    const sdc = dc === 0 ? 0 : (dc > 0 ? 1 : -1);
+    const sdr = dr === 0 ? 0 : dr > 0 ? 1 : -1;
+    const sdc = dc === 0 ? 0 : dc > 0 ? 1 : -1;
     const adr = Math.abs(dr), adc = Math.abs(dc);
     if (!((adr === 0 && adc > 0) || (adc === 0 && adr > 0) || (adr === adc && adr > 0))) return [];
     const n = Math.max(adr, adc);
     const out = [];
     let rr = a.r, cc = a.c;
-    for (let i = 0; i <= n; i++) {
-      out.push({r: rr, c: cc});
-      rr += sdr; cc += sdc;
-    }
+    for (let i = 0; i <= n; i++) { out.push({r: rr, c: cc}); rr += sdr; cc += sdc; }
     return out;
   }
 
@@ -471,7 +438,10 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
         if (txt === w || rev === w) {
           found.add(w);
           updateChips();
-          path.forEach(p => cells[idx(p)].classList.add("hit"));
+          path.forEach(p => {
+            const cell = cells[idx(p)];
+            cell.classList.add("hit", "flip");
+          });
           if (found.size === active.size) win();
           break;
         }
@@ -480,25 +450,17 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
     path = [];
   });
 
-  let lastSecond = -1;
-
   function startTimer() {
     clearInterval(timer);
     timeLeft = BASE_TIME;
     timeEl.textContent = timeLeft;
     timerEl.style.setProperty("--p", "100%");
-    lastSecond = -1;
+    let lastSecond = -1;
     timer = setInterval(() => {
       timeLeft--;
       timeEl.textContent = timeLeft;
       timerEl.style.setProperty("--p", (timeLeft / BASE_TIME * 100) + "%");
-
-      const sec = timeLeft;
-      if (sec !== lastSecond && sec > 0) {
-        lastSecond = sec;
-        if (soundOn && tickOn) safePlay(tickSound);
-      }
-
+      if (timeLeft !== lastSecond && timeLeft > 0) { lastSecond = timeLeft; if (soundOn && tickOn) safePlay(tickSound); }
       if (timeLeft <= 0) lose();
     }, 1000);
   }
@@ -512,7 +474,31 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   function lose() {
     updateStats(false);
     if (soundOn) safePlay(loseSound);
-    end("⏱️ Czas się skończył!<br>Spróbuj jeszcze raz.");
+
+    // Efekty wizualne od razu
+    board.classList.add("shake");
+    setTimeout(() => board.classList.remove("shake"), 600);
+
+    [...wordsEl.children].forEach(chip => {
+      if (!found.has(chip.textContent)) chip.classList.add("pulse");
+    });
+
+    wordPositions.forEach(pos => {
+      if (!found.has(pos.word)) {
+        pos.path.forEach(p => {
+          cells[idx(p)].classList.add("reveal");
+        });
+      }
+    });
+
+    // Overlay z komunikatem dopiero po 3 sekundach
+    setTimeout(() => {
+      // zdejmujemy pulsowanie (opcjonalnie – można zostawić)
+      [...wordsEl.children].forEach(chip => chip.classList.remove("pulse"));
+
+      msg.innerHTML = "⏱️ Czas się skończył!<br>Spróbuj jeszcze raz.";
+      overlay.style.display = "flex";
+    }, 3000);
   }
 
   function end(text) {
@@ -524,6 +510,7 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   function buildRound() {
     overlay.style.display = "none";
     found.clear();
+    wordPositions = [];
     grid = buildGrid();
     renderBoard();
     updateChips();
@@ -533,8 +520,7 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   function startGame() {
     resultsScreen.style.display = "none";
     logoutScreen.style.display = "none";
-    recordsMusic.pause();
-    recordsMusic.currentTime = 0;
+    recordsMusic.pause(); recordsMusic.currentTime = 0;
 
     menu.style.display = "none";
     app.style.display = "flex";
@@ -544,17 +530,14 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
     buildRound();
   }
 
-  // === pozostałe funkcje bez zmian (statystyki, wyjście itp.) ===
-  if (!localStorage.getItem("gameStats")) {
-    localStorage.setItem("gameStats", JSON.stringify({ startDate: new Date().toISOString().split('T')[0], stats: {} }));
-  }
+  // Reszta bez zmian (statystyki, przyciski itd.)
+  if (!localStorage.getItem("gameStats")) localStorage.setItem("gameStats", JSON.stringify({startDate: new Date().toISOString().split('T')[0], stats: {}}));
 
   function updateStats(isWin) {
     const today = new Date().toISOString().split('T')[0];
     const stats = JSON.parse(localStorage.getItem("gameStats"));
-    if (!stats.stats[today]) stats.stats[today] = { wins: 0, losses: 0 };
-    if (isWin) stats.stats[today].wins++;
-    else stats.stats[today].losses++;
+    if (!stats.stats[today]) stats.stats[today] = {wins:0, losses:0};
+    isWin ? stats.stats[today].wins++ : stats.stats[today].losses++;
     localStorage.setItem("gameStats", JSON.stringify(stats));
   }
 
@@ -562,20 +545,14 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
     menu.style.display = "none";
     logoutScreen.style.display = "none";
     resultsScreen.style.display = "flex";
-    if (soundOn) {
-      recordsMusic.currentTime = 0;
-      safePlay(recordsMusic, { reset: false });
-    }
+    if (soundOn) { recordsMusic.currentTime = 0; safePlay(recordsMusic, {reset:false}); }
 
     const stats = JSON.parse(localStorage.getItem("gameStats"));
     const startDate = stats.startDate;
     const dailyStats = stats.stats;
 
     let globalWins = 0, globalLosses = 0;
-    for (const day in dailyStats) {
-      globalWins += dailyStats[day].wins || 0;
-      globalLosses += dailyStats[day].losses || 0;
-    }
+    for (const day in dailyStats) { globalWins += dailyStats[day].wins || 0; globalLosses += dailyStats[day].losses || 0; }
     globalStatsEl.innerHTML = `<h2>Globalnie (od ${startDate})</h2><p>Wygrane rundy: <strong>${globalWins}</strong></p><p>Przegrane rundy: <strong>${globalLosses}</strong></p>`;
 
     const today = new Date().toISOString().split('T')[0];
@@ -585,66 +562,31 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
 
     const dates = Object.keys(dailyStats).sort().reverse();
     let lastSessionDate = null;
-    for (const d of dates) {
-      if (d !== today && (dailyStats[d].wins > 0 || dailyStats[d].losses > 0)) {
-        lastSessionDate = d;
-        break;
-      }
-    }
+    for (const d of dates) if (d !== today && (dailyStats[d].wins > 0 || dailyStats[d].losses > 0)) { lastSessionDate = d; break; }
 
     if (lastSessionDate) {
       const lastWins = dailyStats[lastSessionDate].wins || 0;
       const lastLosses = dailyStats[lastSessionDate].losses || 0;
       lastSessionStatsEl.innerHTML = `<h2>Ostatnia sesja (${lastSessionDate})</h2><p>Wygrane: <strong>${lastWins}</strong></p><p>Przegrane: <strong>${lastLosses}</strong></p>`;
-    } else {
-      lastSessionStatsEl.innerHTML = `<h2>Ostatnia sesja</h2><p>Brak wcześniejszych sesji</p>`;
-    }
+    } else lastSessionStatsEl.innerHTML = `<h2>Ostatnia sesja</h2><p>Brak wcześniejszych sesji</p>`;
   }
 
-  back.onclick = () => {
-    clearInterval(timer);
-    app.style.display = "none";
-    menu.style.display = "flex";
-  };
-
-  again.onclick = () => {
-    words4 = pickWords();
-    applyActiveFromCount();
-    renderChips();
-    buildRound();
-  };
-
+  back.onclick = () => { clearInterval(timer); app.style.display = "none"; menu.style.display = "flex"; };
+  again.onclick = () => { words4 = pickWords(); applyActiveFromCount(); renderChips(); buildRound(); };
   showResultsBtn.onclick = showResults;
-
-  backToMenuBtn.onclick = () => {
-    recordsMusic.pause();
-    recordsMusic.currentTime = 0;
-    resultsScreen.style.display = "none";
-    menu.style.display = "flex";
-  };
+  backToMenuBtn.onclick = () => { recordsMusic.pause(); recordsMusic.currentTime = 0; resultsScreen.style.display = "none"; menu.style.display = "flex"; };
 
   exitBtn.onclick = async () => {
     if (document.fullscreenElement) await document.exitFullscreen();
     clearInterval(timer);
-    recordsMusic.pause();
-    recordsMusic.currentTime = 0;
-    menu.style.display = "none";
-    app.style.display = "none";
-    overlay.style.display = "none";
-    resultsScreen.style.display = "none";
+    recordsMusic.pause(); recordsMusic.currentTime = 0;
+    menu.style.display = "none"; app.style.display = "none"; overlay.style.display = "none"; resultsScreen.style.display = "none";
     logoutScreen.style.display = "flex";
   };
 
-  backFromLogout.onclick = () => {
-    logoutScreen.style.display = "none";
-    menu.style.display = "flex";
-  };
+  backFromLogout.onclick = () => { logoutScreen.style.display = "none"; menu.style.display = "flex"; };
 
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-    });
-  }
+  if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js").catch(() => {}));
 
   menu.style.display = "flex";
   app.style.display = "none";
@@ -654,13 +596,8 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
 <script>
 function goFullscreen() {
   const el = document.documentElement;
-  if (!document.fullscreenElement) {
-    el.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
+  document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen();
 }
 </script>
-
 </body>
 </html>
