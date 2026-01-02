@@ -116,12 +116,12 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
       <div class="menuBtns">
         <button class="btnFlat" data-mode="classic">Klasyczny 5 × 6</button>
         <button class="btnFlat" data-mode="big">Duża plansza 6 × 7</button>
-        <button class="btnFlat" data-mode="xl">XL – 8 × 10 (6-literowe)</button>
+        <button class="btnFlat" data-mode="xl">XL – 8 × 10 (3–6 liter)</button>
         <button class="btnFlat small" id="showResults">📊 Wyniki gry</button>
         <button class="btnFlat small danger" id="exitBtn">🚪 Wyjście</button>
         <button id="copyLinkBtn" class="btnFlat small">📋 Skopiuj adres gry</button>
         <div class="copyTip">
-          ⚠️ Tip: najlepiej skopiować link i otworzyć w <b>Chrome</b> – wtedy można dodać grę na pulpit i śledzić swoje rekordy.
+          🎮 Tip: skopiuj link do gry i wyślij go znajomym – niech też spróbują swoich sił!
         </div>
       </div>
     </div>
@@ -168,17 +168,45 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   const MODES = {
     classic: { cols:5, rows:6, minLen:3, maxLen:4, words:4, time:60 },
     big: { cols:6, rows:7, minLen:3, maxLen:4, words:4, time:60 },
-    xl: { cols:8, rows:10, minLen:6, maxLen:6, words:4, time:60 }
+    xl: { cols:8, rows:10, minLen:3, maxLen:6, words:4, time:60 }
   };
   const BASE_TIME = 60;
   const REVEAL_TIME = 6; // czas w sekundach na oglądanie słów po przegranej (zmień jeśli chcesz)
 
   const WORD_SETS = {
-    religia: ["BÓG","WIARA","MODLITWA","KRZYŻ","ANIOŁ","EWANGELIA","KOŚCIÓŁ","MSZA","DUCH","ŚWIĘTY","JEZUS","MARYJA","APOSTOŁ","GRZECH","MIŁOŚĆ"],
-    przyroda: ["LAS","DRZEWO","RZEKA","DESZCZ","GÓRA","WIATR","MORZE","JEZIORO","KWIAT","LIŚĆ","TRAWA","CHMURA","SŁOŃCE","KSIĘŻYC","GWIAZDA"],
-    zwierzeta: ["KOT","PIES","WILK","ORZEŁ","RYBA","KOŃ","ŻABA","PTAK","NIEDŹWIEDŹ","LIS","JELEŃ","SARNA","ŻÓŁW","WĄŻ","MOTYL"],
-    gwiazdy: ["SŁOŃCE","KSIĘŻYC","PLANETA","KOMETA","GWIAZDA","ORION","WENUS","MARS","JOWISZ","SATURN","DROGA","MLECZNA","METEOR","SATELITA"]
+    religia: [
+      "BÓG","WIARA","KRZYŻ","ANIOŁ","JEZUS","MARYJA","DUCH","GRZECH",
+      "MIŁOŚĆ","POKÓJ","MSZA","POST","CUD","ŁASKA","PRAWDA","ŻYCIE",
+      "SERCE","DUSZA","OŁTARZ","SŁOWO","OFIARA","POKUTA",
+      "NIEBO","ZIEMIA","DOBRO","ZŁO","WIARA",
+      "PSALM","CHWAŁA","AMEN","BŁOGI","ŚWIĘTY","PRAWO","MOC","DAR"
+    ],
+
+    przyroda: [
+      "LAS","RZEKA","DESZCZ","GÓRA","WIATR","MORZE","KWIAT","LIŚĆ",
+      "TRAWA","CHMURA","SŁOŃCE","KSIĘŻY","ZIEMIA","SKAŁA","PIASEK",
+      "WODA","OGIEŃ","ŚNIEG","BURZA","MGŁA","FALA","BRZEG",
+      "DOLINA","ŹRÓDŁO","POLE","ŁĄKA","KAMIEŃ","GLEBA","NURT",
+      "CIEŃ","BLASK","ZACHÓD","WSCHÓD","NOC","DZIEŃ"
+    ],
+
+    zwierzeta: [
+      "KOT","PIES","WILK","ORZEŁ","RYBA","KOŃ","ŻABA","PTAK",
+      "LIS","JELEŃ","SARNA","ŻÓŁW","WĄŻ","MOTYL","BÓBR",
+      "RYŚ","SOWA","KRUK","OSA","MRÓWKA","ŁOŚ","DZIK",
+      "KURA","KACZKA","GOŁĄB","KRET","MYSZ","BYK",
+      "OWCA","KOZA","JELEN","BORSUK","ŁASICA","SZPAK"
+    ],
+
+    gwiazdy: [
+      "SŁOŃCE","KSIĘŻY","PLANET","KOMETA","GWIAZD","ORION",
+      "WENUS","MARS","JOWISZ","SATURN","URAN","NEPTUN",
+      "METEOR","KOSMOS","ORBITY","ŚWIATŁO","CIEMNO",
+      "CZAS","PRÓŻNIA","ASTRA","GALAKT","TELESK",
+      "PULSAR","KWAZAR","DROGA","MLECZ","NOC","BLASK"
+    ]
   };
+
 
   let CURRENT_CATEGORY = "religia";
   let isRevealPhase = false; // czy jesteśmy w fazie pokazywania słów po przegranej
@@ -207,6 +235,7 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   const exitBtn = document.getElementById("exitBtn");
   const backToDW = document.getElementById("backToDW");
 
+  let CURRENT_MODE = null;
   let GAME = { rows: 6, cols: 5 };
   let words4 = [];
   let active = new Set();
@@ -226,8 +255,8 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
   const recordsMusic = new Audio('sounds/records_loop.mp3');
   const fanfareSound = new Audio('sounds/fanfare.mp3');
   const loseSound = new Audio('sounds/lose.mp3');
-  clickSound.volume = 0.6; tickSound.volume = 0.6; recordsMusic.volume = 0.9; recordsMusic.loop = true;
-  fanfareSound.volume = 0.4; loseSound.volume = 0.8;
+  clickSound.volume = 0.5; tickSound.volume = 0.5; recordsMusic.volume = 0.9; recordsMusic.loop = true;
+  fanfareSound.volume = 0.4; loseSound.volume = 0.6;
   let soundOn = (localStorage.getItem("SOUND_ON") ?? "1") !== "0";
   let tickOn = (localStorage.getItem("TICK_ON") ?? "1") !== "0";
 
@@ -263,12 +292,14 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
 
   document.querySelectorAll("[data-mode]").forEach(btn => {
     btn.onclick = () => {
-      const m = MODES[btn.dataset.mode];
+      CURRENT_MODE = btn.dataset.mode;   // <<< TO JEST KLUCZ
+      const m = MODES[CURRENT_MODE];
       GAME = { rows: m.rows, cols: m.cols };
       updateBoardCSS();
       startGame(m.minLen, m.maxLen, m.words);
     };
   });
+
 
   function updateBoardCSS() {
     board.style.gridTemplateColumns = `repeat(${GAME.cols}, 1fr)`;
@@ -534,7 +565,15 @@ body{display:flex;align-items:center;justify-content:center;background:#d9cfae}
     app.style.display = "none"; 
     menu.style.display = "flex"; 
   };
-  again.onclick = () => { words4 = pickWords(GAME.minLen || 3, GAME.maxLen || 4, GAME.words || 4); applyActiveFromCount(); renderChips(); buildRound(); };
+  again.onclick = () => {
+    const m = MODES[CURRENT_MODE];   // ← ten sam tryb co wybrałeś
+    words4 = pickWords(m.minLen, m.maxLen, m.words);
+    applyActiveFromCount();
+    renderChips();
+    buildRound();
+  };
+
+
   showResultsBtn.onclick = showResults;
   backToMenuBtn.onclick = () => { recordsMusic.pause(); recordsMusic.currentTime = 0; resultsScreen.style.display = "none"; menu.style.display = "flex"; };
 
